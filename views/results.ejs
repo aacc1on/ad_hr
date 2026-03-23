@@ -1,0 +1,200 @@
+<%- include('partials/head', { title: 'Results — ' + summary.analysis.analysis_name }) %>
+<%- include('partials/header') %>
+
+<main class="page">
+
+  <div class="breadcrumb">
+    <a href="/">Upload</a> /
+    <a href="/results">History</a> /
+    <span><%= summary.analysis.analysis_name %></span>
+  </div>
+
+  <div class="page-header">
+    <h1><%= summary.analysis.analysis_name %></h1>
+    <p style="margin:0;font-size:.85rem;font-family:var(--font-mono);color:var(--text-dim)">
+      <%= new Date(summary.analysis.created_at).toLocaleString() %>
+      &nbsp;·&nbsp; Analysis #<%= summary.analysis.id %>
+      <% if (summary.duplicatesSkipped > 0) { %>
+        &nbsp;·&nbsp; <span style="color:var(--amber)"><%= summary.duplicatesSkipped %> HR duplicates skipped on import</span>
+      <% } %>
+    </p>
+  </div>
+
+  <!-- ── Top stats ─────────────────────────────────────────────────── -->
+  <div class="stats-grid">
+    <div class="stat-card green">
+      <div class="stat-number"><%= summary.matched %></div>
+      <div class="stat-label">Matched ✓</div>
+      <div class="stat-sub"><%= summary.matchPercentage %>% of AD records</div>
+      <div class="progress-bar" style="margin-top:.75rem">
+        <div class="progress-fill" style="width:<%= summary.matchPercentage %>%"></div>
+      </div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-number"><%= summary.ghost %></div>
+      <div class="stat-label">Ghost Accounts</div>
+      <div class="stat-sub">In AD · not in HR</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-number"><%= summary.missing %></div>
+      <div class="stat-label">Missing in AD</div>
+      <div class="stat-sub">In HR · no AD account</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-number"><%= summary.analysis.total_ad_records %></div>
+      <div class="stat-label">AD Total</div>
+      <div class="stat-sub">HR: <%= summary.analysis.total_hr_records %></div>
+    </div>
+  </div>
+
+  <!-- ── Deep Search ───────────────────────────────────────────────── -->
+  <div style="position:relative;margin-bottom:1.5rem">
+    <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:1rem;pointer-events:none">🔍</span>
+    <input type="text" id="deepSearch" class="form-control"
+      placeholder="Deep search by Name, Tabel, Email, SamAccountName…"
+      style="padding-left:2.75rem;background:var(--surface);border-color:var(--border-lit);font-size:1rem"
+      oninput="runDeepSearch(this.value)">
+  </div>
+  <div id="deepResults" style="display:none;margin-bottom:1.5rem"></div>
+
+  <!-- ── Main dashboard ────────────────────────────────────────────── -->
+  <div id="mainDash">
+
+    <%
+      const catMeta = {
+        GHOST_ACCOUNT:   { label:'Ghost Accounts',   icon:'👻', pill:'pill-high',   desc:'In AD · not in HR' },
+        MISSING_ACCOUNT: { label:'Missing in AD',    icon:'⚠',  pill:'pill-medium', desc:'In HR · no AD account' },
+        TABEL_MISMATCH:  { label:'Tabel Mismatch',   icon:'🔢', pill:'pill-medium', desc:'extAttr1 ≠ HR Tabel' },
+        EMAIL_MISMATCH:  { label:'Email Mismatch',   icon:'✉',  pill:'pill-medium', desc:'AD UPN ≠ HR email' },
+        MISSING_ATTR1:   { label:'Missing extAttr1', icon:'🚫', pill:'pill-high',   desc:'No valid tabel in AD' },
+        DRIVER:          { label:'Drivers',          icon:'🚗', pill:'pill-info',   desc:'@u.ucom.am accounts' },
+        MATCHED:         { label:'Matched ✓',        icon:'✓',  pill:'pill-info',   desc:'Fully consistent' },
+        DUPLICATE_TABEL: { label:'Duplicate Tabels', icon:'⚡', pill:'pill-high',   desc:'Same tabel on multiple accounts' },
+      };
+      const catOrder = ['GHOST_ACCOUNT','MISSING_ACCOUNT','TABEL_MISMATCH','EMAIL_MISMATCH',
+                        'MISSING_ATTR1','DRIVER','MATCHED','DUPLICATE_TABEL'];
+    %>
+
+    <div class="categories-grid" style="margin-bottom:1.5rem">
+      <% catOrder.forEach(cat => {
+           const meta  = catMeta[cat];
+           const count = summary.counts[cat] || 0;
+      %>
+      <a href="/results/<%= summary.analysis.id %>/category/<%= cat %>"
+         class="cat-card"
+         style="<%= count === 0 ? 'opacity:.4;pointer-events:none' : '' %>">
+        <div class="cat-pill <%= meta.pill %>"><%= meta.icon %> <%= meta.label %></div>
+        <div class="cat-count" style="<%= count===0?'color:var(--text-dim)':'' %>"><%= count %></div>
+        <div class="cat-name"><%= meta.desc %></div>
+        <% if (count > 0) { %><div class="cat-action">View details →</div><% } %>
+      </a>
+      <% }) %>
+    </div>
+
+    <div class="actions-bar">
+      <a href="/" class="btn btn-secondary">← New Analysis</a>
+      <a href="/results" class="btn btn-secondary">History</a>
+      <a href="/results/<%= summary.analysis.id %>/export" class="btn btn-primary">⬇ Full CSV</a>
+      <a href="/results/<%= summary.analysis.id %>/export/excel" class="btn btn-primary">⬇ Excel (all sheets)</a>
+    </div>
+
+  </div>
+</main>
+
+<%- include('partials/footer') %>
+
+<script>
+let allProfiles = null;
+
+async function loadProfiles() {
+  if (allProfiles) return;
+  const r = await fetch('/results/<%= summary.analysis.id %>/profiles.json');
+  allProfiles = await r.json();
+}
+
+async function runDeepSearch(q) {
+  const mainDash = document.getElementById('mainDash');
+  const deepDiv  = document.getElementById('deepResults');
+  const trimmed  = q.trim().toLowerCase();
+
+  if (trimmed.length < 2) {
+    mainDash.style.display = '';
+    deepDiv.style.display  = 'none';
+    return;
+  }
+
+  await loadProfiles();
+  mainDash.style.display = 'none';
+  deepDiv.style.display  = 'block';
+
+  const COLOR = {
+    GHOST_ACCOUNT:'#ef4444', MISSING_ACCOUNT:'#f97316', TABEL_MISMATCH:'#eab308',
+    EMAIL_MISMATCH:'#3b82f6', MISSING_ATTR1:'#a855f7',  DRIVER:'#14b8a6',
+    MATCHED:'#22c55e', DUPLICATE_TABEL:'#f43f5e',
+  };
+
+  const matches = allProfiles.filter(p =>
+    JSON.stringify(p).toLowerCase().includes(trimmed)
+  );
+
+  if (!matches.length) {
+    deepDiv.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><h3>No results for «${escH(q)}»</h3></div>`;
+    return;
+  }
+
+  deepDiv.innerHTML = `
+    <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem">
+      <strong style="color:var(--text)">${matches.length}</strong> result${matches.length!==1?'s':''} for «${escH(q)}»
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:1rem">
+      ${matches.map(p => auditCard(p, COLOR[p.category]||'#888')).join('')}
+    </div>`;
+}
+
+function auditCard(p, color) {
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid ${color};border-radius:12px;overflow:hidden">
+    <div style="padding:.55rem 1rem;font-size:.78rem;font-weight:700;color:${color};background:${color}18">
+      ${p.category.replace(/_/g,' ')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr">
+      <div style="padding:1rem;border-right:1px solid var(--border)">
+        <p style="font-size:.68rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">Active Directory</p>
+        ${fld('SamAccount',   p.sam_account_name)}
+        ${fld('Display Name', p.ad_name)}
+        ${fld('Email',        p.ad_mail)}
+        ${fld('Tabel',        p.ad_tabel)}
+        ${fld('Expires',      p.account_expiry)}
+        ${fld('Last Logon',   p.last_logon)}
+      </div>
+      <div style="padding:1rem">
+        <p style="font-size:.68rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">HR Record</p>
+        ${fld('Name',       p.hr_name)}
+        ${fld('Email',      p.hr_email)}
+        ${fld('Tabel',      p.hr_tabel)}
+        ${fld('Department', p.hr_dept)}
+        ${fld('Status',     p.hr_status, isTerminated(p.hr_status))}
+      </div>
+    </div>
+    ${p.description ? `<div style="padding:.5rem 1rem;font-size:.75rem;color:var(--text-muted);border-top:1px solid var(--border);font-family:var(--font-mono)">${escH(p.description)}</div>` : ''}
+  </div>`;
+}
+
+function fld(label, val, terminated) {
+  if (!val) return '';
+  const color = terminated ? 'color:#ef4444;font-weight:600' : '';
+  return `<div style="margin-bottom:.45rem">
+    <div style="font-size:.65rem;color:var(--text-dim);font-family:var(--font-mono)">${label}</div>
+    <div style="font-size:.83rem;word-break:break-all;${color}">${escH(val)}</div>
+  </div>`;
+}
+
+function isTerminated(s) {
+  if (!s) return false;
+  const l = s.toLowerCase();
+  return l.includes('ազատ')||l.includes('արձակ')||l.includes('terminated')||l.includes('fired');
+}
+
+function escH(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>

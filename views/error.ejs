@@ -1,0 +1,16 @@
+<%- include('partials/head', { title: 'Error' }) %>
+
+<div class="error-page">
+  <div class="error-box">
+    <div class="error-code" style="font-size:4rem">⚠</div>
+    <h2 style="margin-bottom:.5rem"><%= message || 'An error occurred' %></h2>
+    <% if (error) { %>
+      <div class="alert alert-error" style="text-align:left;margin-top:1rem">
+        <code style="font-size:.82rem;word-break:break-all"><%= error %></code>
+      </div>
+    <% } %>
+    <a href="/" class="btn btn-primary" style="margin-top:1.25rem">← Go Home</a>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

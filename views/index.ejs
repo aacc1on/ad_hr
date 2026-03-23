@@ -1,0 +1,175 @@
+<%- include('partials/head', { title: 'Upload' }) %>
+<%- include('partials/header') %>
+
+<main class="page">
+
+  <div class="page-header">
+    <h1>New Reconciliation</h1>
+    <p style="margin:0">Upload an AD export and one or more HR Excel files to begin.</p>
+  </div>
+
+  <% if (error) { %>
+    <div class="alert alert-error">⚠ <%= error %></div>
+  <% } %>
+  <% if (success) { %>
+    <div class="alert alert-success">✓ <%= success %></div>
+  <% } %>
+
+  <!-- ── Upload form ────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <h2>📤 Upload Files</h2>
+    </div>
+
+    <form method="POST" action="/process" enctype="multipart/form-data" id="uploadForm">
+
+      <div class="form-group">
+        <label for="analysis_name">Analysis Name</label>
+        <input type="text" id="analysis_name" name="analysis_name" class="form-control"
+               placeholder="e.g. March 2026 Reconciliation" maxlength="120">
+        <p class="form-hint">Leave blank to auto-generate from today's date.</p>
+      </div>
+
+      <div class="upload-grid">
+
+        <!-- AD file (single CSV) -->
+        <div>
+          <label>Active Directory Export <span style="color:var(--red)">*</span></label>
+          <div class="upload-zone" id="adZone">
+            <input type="file" name="ad_file" id="adFile" accept=".csv" required>
+            <div class="upload-icon">📄</div>
+            <div class="upload-label">Drop CSV here or click to browse</div>
+            <div class="upload-sub">Single file · Max 20 MB</div>
+            <div class="upload-selected" id="adSelected" style="display:none"></div>
+          </div>
+          <p class="form-hint" style="margin-top:.5rem">
+            Required columns: <code>SamAccountName</code>, <code>mail</code>,
+            <code>DisplayName</code>, <code>extensionAttribute1</code> (Tabel), <code>Department</code>
+          </p>
+        </div>
+
+        <!-- HR files (multiple Excel) -->
+        <div>
+          <label>HR Records <span style="color:var(--red)">*</span></label>
+          <div class="upload-zone" id="hrZone">
+            <input type="file" name="hr_files" id="hrFiles" accept=".xls,.xlsx" multiple required>
+            <div class="upload-icon">📊</div>
+            <div class="upload-label">Drop Excel file(s) here or click to browse</div>
+            <div class="upload-sub">Multiple files allowed · All sheets processed · Max 20 MB each</div>
+            <div class="upload-selected" id="hrSelected" style="display:none"></div>
+          </div>
+          <p class="form-hint" style="margin-top:.5rem">
+            Required: <code>Tabel / Տաբել</code> column.
+            Supports Armenian, English, and Russian column names.
+          </p>
+        </div>
+
+      </div><!-- /upload-grid -->
+
+      <!-- Column alias reference -->
+      <details style="margin-bottom:1.25rem">
+        <summary style="cursor:pointer;font-size:.85rem;color:var(--text-muted);padding:.4rem 0">
+          Supported column name aliases ▾
+        </summary>
+        <div style="margin-top:.75rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem">
+          <div>
+            <p style="font-size:.8rem;font-weight:700;color:var(--text-muted);margin-bottom:.3rem">TABEL NUMBER</p>
+            <code style="display:block;font-size:.78rem;line-height:2">
+              Tabel · Tabell · Employee ID · EmpID<br>
+              Տաբել · Տաբելային համար<br>
+              Табельный номер · Табель
+            </code>
+          </div>
+          <div>
+            <p style="font-size:.8rem;font-weight:700;color:var(--text-muted);margin-bottom:.3rem">EMAIL</p>
+            <code style="display:block;font-size:.78rem;line-height:2">
+              Email · E-mail · Mail<br>
+              Էլ. փոստ · Էլ.փոստ<br>
+              Эл. почта · Почта
+            </code>
+          </div>
+          <div>
+            <p style="font-size:.8rem;font-weight:700;color:var(--text-muted);margin-bottom:.3rem">DEPARTMENT</p>
+            <code style="display:block;font-size:.78rem;line-height:2">
+              Department · Dept · Division<br>
+              Բաժին · Վարչություն<br>
+              Отдел · Подразделение
+            </code>
+          </div>
+        </div>
+      </details>
+
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        <button type="submit" class="btn btn-primary" id="submitBtn">
+          🚀 Start Reconciliation
+        </button>
+        <span id="loadingMsg" style="display:none;font-size:.875rem;color:var(--text-muted)">
+          ⏳ Processing files, please wait…
+        </span>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- ── Recent analyses ────────────────────────────────────────── -->
+  <% if (recentAnalyses && recentAnalyses.length > 0) { %>
+  <div class="card">
+    <div class="card-header">
+      <h2>🕓 Recent Analyses</h2>
+      <a href="/results" class="btn btn-ghost btn-sm">View all →</a>
+    </div>
+
+    <div class="run-list">
+      <% recentAnalyses.forEach(run => { %>
+      <div class="run-item">
+        <div>
+          <div class="run-name"><%= run.analysis_name %></div>
+          <div class="run-meta">
+            <%= new Date(run.created_at).toLocaleString() %>
+            &nbsp;·&nbsp; AD: <%= run.total_ad_records || '—' %>
+            &nbsp;·&nbsp; HR: <%= run.total_hr_records || '—' %>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <span class="run-status status-<%= run.status %>"><%= run.status %></span>
+          <a href="/results/<%= run.id %>" class="btn btn-secondary btn-sm">View</a>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+  <% } %>
+
+</main>
+
+<%- include('partials/footer') %>
+
+<script>
+/* ── File input display ──────────────────────────────────────── */
+function initZone(inputId, labelId) {
+  const input = document.getElementById(inputId);
+  const label = document.getElementById(labelId);
+  if (!input || !label) return;
+
+  input.addEventListener('change', () => {
+    const files = Array.from(input.files);
+    if (!files.length) { label.style.display = 'none'; return; }
+    label.style.display = 'block';
+    if (files.length === 1) {
+      label.textContent = '✓ ' + files[0].name;
+    } else {
+      label.innerHTML = files.map(f => `<div class="file-item">✓ ${f.name}</div>`).join('');
+    }
+  });
+}
+
+initZone('adFile',  'adSelected');
+initZone('hrFiles', 'hrSelected');
+
+/* ── Show loading on submit ──────────────────────────────────── */
+document.getElementById('uploadForm').addEventListener('submit', function () {
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('submitBtn').textContent = 'Processing…';
+  document.getElementById('loadingMsg').style.display = 'inline';
+});
+</script>

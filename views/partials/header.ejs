@@ -1,0 +1,22 @@
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="/" class="brand">
+      <div class="brand-icon">⇄</div>
+      <span>AD ↔ HR Sync</span>
+    </a>
+
+    <% if (user) { %>
+    <div class="nav-links">
+      <a href="/"        class="nav-link">Upload</a>
+      <a href="/results" class="nav-link">History</a>
+      <div class="nav-sep"></div>
+      <div class="nav-user">
+        <div class="nav-avatar"><%= user.username.charAt(0) %></div>
+        <span><%= user.username %></span>
+      </div>
+      <div class="nav-sep"></div>
+      <a href="/logout" class="btn btn-ghost btn-sm">Logout</a>
+    </div>
+    <% } %>
+  </div>
+</nav>

@@ -1,0 +1,74 @@
+<%- include('partials/head', { title: 'History' }) %>
+<%- include('partials/header') %>
+
+<main class="page">
+
+  <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+    <div>
+      <h1>Analysis History</h1>
+      <p style="margin:0">All reconciliation runs for <strong style="color:var(--text)"><%= username %></strong></p>
+    </div>
+    <a href="/" class="btn btn-primary">+ New Analysis</a>
+  </div>
+
+  <% if (analyses && analyses.length > 0) { %>
+
+  <div class="table-wrap">
+    <table class="dt">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Analysis Name</th>
+          <th>Date</th>
+          <th>AD Records</th>
+          <th>HR Records</th>
+          <th>Duplicates Skipped</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% analyses.forEach(run => { %>
+        <tr>
+          <td class="mono" style="color:var(--text-dim)"><%= run.id %></td>
+          <td><strong><%= run.analysis_name %></strong></td>
+          <td class="mono" style="font-size:.8em;color:var(--text-muted)">
+            <%= new Date(run.created_at).toLocaleString() %>
+          </td>
+          <td class="mono"><%= run.total_ad_records ?? '—' %></td>
+          <td class="mono"><%= run.total_hr_records ?? '—' %></td>
+          <td class="mono">
+            <% if (run.duplicates_skipped > 0) { %>
+              <span style="color:var(--amber)"><%= run.duplicates_skipped %></span>
+            <% } else { %>
+              <span style="color:var(--text-dim)">0</span>
+            <% } %>
+          </td>
+          <td>
+            <span class="run-status status-<%= run.status %>"><%= run.status %></span>
+          </td>
+          <td>
+            <div style="display:flex;gap:.4rem">
+              <a href="/results/<%= run.id %>" class="btn btn-secondary btn-sm">View</a>
+              <a href="/results/<%= run.id %>/export" class="btn btn-ghost btn-sm">⬇ CSV</a>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <% } else { %>
+
+  <div class="empty">
+    <div class="empty-icon">📂</div>
+    <h3>No analyses yet</h3>
+    <p><a href="/">Upload files</a> to run your first reconciliation.</p>
+  </div>
+
+  <% } %>
+
+</main>
+
+<%- include('partials/footer') %>

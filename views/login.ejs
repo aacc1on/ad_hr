@@ -1,0 +1,42 @@
+<%- include('partials/head', { title: 'Login' }) %>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+
+    <div class="auth-logo-wrap">
+      <div class="auth-logo">⇄</div>
+      <h1>AD ↔ HR Sync</h1>
+      <p>Identity Reconciliation Platform</p>
+    </div>
+
+    <% if (error) { %>
+      <div class="alert alert-error">⚠ <%= error %></div>
+    <% } %>
+
+    <form method="POST" action="/login">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" class="form-control"
+               placeholder="Enter username" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-control"
+               placeholder="Enter password" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:.5rem">
+        Sign in
+      </button>
+    </form>
+
+    <p style="text-align:center;margin-top:1.25rem;font-size:.85rem">
+      No account? <a href="/register">Register</a>
+      &nbsp;·&nbsp; Default: <code>admin / admin123</code>
+    </p>
+
+  </div>
+</div>
+
+<%- include('partials/footer') %>

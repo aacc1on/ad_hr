@@ -1,0 +1,12 @@
+<%- include('partials/head', { title: '404' }) %>
+
+<div class="error-page">
+  <div class="error-box">
+    <div class="error-code">404</div>
+    <h2 style="margin-bottom:.5rem"><%= message || 'Page not found' %></h2>
+    <p>The page you're looking for doesn't exist or has been moved.</p>
+    <a href="/" class="btn btn-primary" style="margin-top:1rem">← Go Home</a>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

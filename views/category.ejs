@@ -1,0 +1,133 @@
+<%- include('partials/head', { title: category.replace(/_/g,' ') }) %>
+<%- include('partials/header') %>
+
+<main class="page">
+
+  <div class="breadcrumb">
+    <a href="/">Upload</a> /
+    <a href="/results">History</a> /
+    <a href="/results/<%= analysis.id %>"><%= analysis.analysis_name %></a> /
+    <span><%= category.replace(/_/g,' ') %></span>
+  </div>
+
+  <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+    <div>
+      <%
+        const catLabels = {
+          GHOST_ACCOUNT:   '👻 Ghost Accounts — In AD, not in HR',
+          MISSING_ACCOUNT: '⚠ Missing in AD — In HR, no AD account',
+          TABEL_MISMATCH:  '🔢 Tabel Mismatch — extAttr1 ≠ HR Tabel',
+          EMAIL_MISMATCH:  '✉ Email Mismatch — AD UPN ≠ HR email',
+          MISSING_ATTR1:   '🚫 Missing extAttr1 — No valid Tabel in AD',
+          DRIVER:          '🚗 Drivers / Field Tech — @u.ucom.am accounts',
+          MATCHED:         '✓ Fully Matched',
+          DUPLICATE_TABEL: '⚡ Duplicate Tabels — Same Tabel on multiple accounts',
+        };
+      %>
+      <h1><%= catLabels[category] || category.replace(/_/g,' ') %></h1>
+      <p style="margin:.25rem 0 0;font-size:.875rem;color:var(--text-muted)">
+        <strong style="color:var(--text)"><%= totalCount %></strong> records
+        <% if (totalPages > 1) { %> &nbsp;·&nbsp; Page <%= page %> / <%= totalPages %><% } %>
+      </p>
+    </div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
+      <a href="/results/<%= analysis.id %>/export/<%= category %>" class="btn btn-primary btn-sm">⬇ CSV</a>
+      <a href="/results/<%= analysis.id %>" class="btn btn-secondary btn-sm">← Back</a>
+    </div>
+  </div>
+
+  <!-- Inline filter -->
+  <div style="margin-bottom:1rem">
+    <input type="text" id="filterInput" class="form-control"
+      placeholder="Filter table…"
+      style="max-width:340px;background:var(--surface);border-color:var(--border-lit)"
+      oninput="filterRows(this.value)">
+  </div>
+
+  <% if (records.length > 0) { %>
+
+  <div class="table-wrap">
+    <table class="dt" id="dataTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>AD Account</th>
+          <th>AD Name</th>
+          <th>AD Email</th>
+          <th>AD Tabel</th>
+          <th>AD Dept</th>
+          <th>AD Type</th>
+          <th>Expires</th>
+          <th>Last Logon</th>
+          <th>HR Name</th>
+          <th>HR Email</th>
+          <th>HR Tabel</th>
+          <th>HR Dept</th>
+          <th>HR Status</th>
+          <th>Sev</th>
+          <th>Match</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% records.forEach((r, i) => {
+             const sev = (r.severity || 'INFO').toLowerCase();
+             const terminated = r.hr_status && (
+               r.hr_status.toLowerCase().includes('ազատ') ||
+               r.hr_status.toLowerCase().includes('արձակ') ||
+               r.hr_status.toLowerCase().includes('terminated')
+             );
+        %>
+        <tr>
+          <td class="mono" style="color:var(--text-dim)"><%= ((page-1)*50) + i + 1 %></td>
+          <td class="mono"><%= r.sam_account_name || '<span class="cell-na">—</span>' %></td>
+          <td><%= r.ad_name    || '<span class="cell-na">—</span>' %></td>
+          <td class="mono" style="font-size:.78em"><%= r.ad_mail    || '<span class="cell-na">—</span>' %></td>
+          <td class="mono" style="color:var(--amber)"><%= r.ad_tabel   || '<span class="cell-na">—</span>' %></td>
+          <td><%= r.ad_dept    || '<span class="cell-na">—</span>' %></td>
+          <td class="mono" style="font-size:.8em;color:var(--text-muted)"><%= r.ad_type || '—' %></td>
+          <td class="mono" style="font-size:.8em;color:var(--text-muted)"><%= r.account_expiry ? r.account_expiry.slice(0,10) : '—' %></td>
+          <td class="mono" style="font-size:.8em;color:var(--text-muted)"><%= r.last_logon    ? r.last_logon.slice(0,10)    : '—' %></td>
+          <td><%= r.employee_name || '<span class="cell-na">—</span>' %></td>
+          <td class="mono" style="font-size:.78em"><%= r.hr_email   || '<span class="cell-na">—</span>' %></td>
+          <td class="mono" style="color:var(--amber)"><%= r.hr_tabel    || '<span class="cell-na">—</span>' %></td>
+          <td><%= r.hr_dept    || '<span class="cell-na">—</span>' %></td>
+          <td style="<%= terminated ? 'color:#ef4444;font-weight:600' : '' %>">
+            <%= r.hr_status || '<span class="cell-na">—</span>' %>
+          </td>
+          <td><span class="badge badge-<%= sev %>"><%= r.severity || 'INFO' %></span></td>
+          <td class="mono" style="color:var(--text-muted)"><%= r.match_score ? Math.round(r.match_score) : '—' %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <% if (totalPages > 1) { %>
+  <div class="pagination">
+    <% if (page > 1) { %><a href="?page=<%= page-1 %>" class="pg-btn">‹</a><% } %>
+    <% for (let p = Math.max(1, page-2); p <= Math.min(totalPages, page+2); p++) { %>
+      <a href="?page=<%= p %>" class="pg-btn <%= p===page?'active':'' %>"><%= p %></a>
+    <% } %>
+    <% if (page < totalPages) { %><a href="?page=<%= page+1 %>" class="pg-btn">›</a><% } %>
+  </div>
+  <% } %>
+
+  <% } else { %>
+  <div class="empty">
+    <div class="empty-icon">📭</div>
+    <h3>No records in this category</h3>
+  </div>
+  <% } %>
+
+</main>
+
+<%- include('partials/footer') %>
+
+<script>
+function filterRows(q) {
+  const lower = q.toLowerCase();
+  document.querySelectorAll('#dataTable tbody tr').forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(lower) ? '' : 'none';
+  });
+}
+</script>
