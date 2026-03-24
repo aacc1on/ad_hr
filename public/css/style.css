@@ -7,30 +7,30 @@
 
 /* ── Variables ───────────────────────────────────────────────────────────── */
 :root {
-  --bg:          #0d1117;
-  --surface:     #161b22;
-  --surface2:    #1c2230;
-  --border:      #2a3347;
-  --border-lit:  #3d4f6b;
+  --bg:          #030d06;
+  --surface:     #071a0c;
+  --surface2:    #0c2713;
+  --border:      #1a4d2c;
+  --border-lit:  #236b3a;
 
-  --emerald:     #3fb950;
-  --emerald-dim: #238636;
-  --emerald-glow:rgba(63,185,80,0.12);
+  --emerald:     #4ade80;
+  --emerald-dim: #16a34a;
+  --emerald-glow:rgba(74,222,128,0.12);
   --amber:       #e3b341;
   --red:         #f85149;
   --blue:        #58a6ff;
   --purple:      #bc8cff;
 
-  --text:        #e6edf3;
-  --text-muted:  #8b949e;
-  --text-dim:    #484f58;
+  --text:        #e2f0e8;
+  --text-muted:  #7aad8a;
+  --text-dim:    #3a6647;
 
   --font-sans:   'Sora', sans-serif;
   --font-mono:   'IBM Plex Mono', monospace;
 
   --radius:      8px;
   --radius-lg:   14px;
-  --shadow:      0 4px 24px rgba(0,0,0,0.4);
+  --shadow:      0 4px 24px rgba(0,0,0,0.5);
   --shadow-sm:   0 2px 8px rgba(0,0,0,0.3);
 
   --transition:  0.18s ease;

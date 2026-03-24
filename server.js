@@ -27,7 +27,8 @@ app.use(session({
   resave:            false,
   saveUninitialized: false,
   cookie: {
-    secure:   process.env.NODE_ENV === 'production',
+    // secure:   process.env.NODE_ENV === 'production',
+    secure: false, // For development; set to true in production with HTTPS
     httpOnly: true,
     sameSite: 'strict',
     maxAge:   parseInt(process.env.SESSION_MAX_AGE || '86400000'),
