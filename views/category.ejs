@@ -31,7 +31,8 @@
       </p>
     </div>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
-      <a href="/results/<%= analysis.id %>/export/<%= category %>" class="btn btn-primary btn-sm">⬇ CSV</a>
+      <a href="/results/<%= analysis.id %>/category/<%= category %>/export" class="btn btn-primary btn-sm">⬇ CSV</a>
+      <a href="/results/<%= analysis.id %>/category/<%= category %>/export/excel" class="btn btn-primary btn-sm">⬇ Excel</a>
       <a href="/results/<%= analysis.id %>" class="btn btn-secondary btn-sm">← Back</a>
     </div>
   </div>
@@ -78,22 +79,21 @@
              );
         %>
         <tr>
-          <td class="mono" style="color:var(--text-dim)"><%= ((page-1)*50) + i + 1 %></td>
-          <td class="mono"><%= r.sam_account_name || '<span class="cell-na">—</span>' %></td>
-          <td><%= r.ad_name    || '<span class="cell-na">—</span>' %></td>
-          <td class="mono" style="font-size:.78em"><%= r.ad_mail    || '<span class="cell-na">—</span>' %></td>
-          <td class="mono" style="color:var(--amber)"><%= r.ad_tabel   || '<span class="cell-na">—</span>' %></td>
-          <td><%= r.ad_dept    || '<span class="cell-na">—</span>' %></td>
+          <% const hrStatus = (r.hr_status || '').toString().trim(); %>
+          <td class="mono" style="color:var(--text-dim)"><%= ((page-1) * 50) + i + 1 %></td>
+          <td class="mono"><%= r.sam_account_name || '—' %></td>
+          <td><%= r.ad_name || '—' %></td>
+          <td class="mono" style="font-size:.78em"><%= r.ad_mail || '—' %></td>
+          <td class="mono" style="color:var(--amber)"><%= r.ad_tabel || '—' %></td>
+          <td><%= r.ad_dept || '—' %></td>
           <td class="mono" style="font-size:.8em;color:var(--text-muted)"><%= r.ad_type || '—' %></td>
           <td class="mono" style="font-size:.8em;color:var(--text-muted)"><%= r.account_expiry ? r.account_expiry.slice(0,10) : '—' %></td>
-          <td class="mono" style="font-size:.8em;color:var(--text-muted)"><%= r.last_logon    ? r.last_logon.slice(0,10)    : '—' %></td>
-          <td><%= r.employee_name || '<span class="cell-na">—</span>' %></td>
-          <td class="mono" style="font-size:.78em"><%= r.hr_email   || '<span class="cell-na">—</span>' %></td>
-          <td class="mono" style="color:var(--amber)"><%= r.hr_tabel    || '<span class="cell-na">—</span>' %></td>
-          <td><%= r.hr_dept    || '<span class="cell-na">—</span>' %></td>
-          <td style="<%= terminated ? 'color:#ef4444;font-weight:600' : '' %>">
-            <%= r.hr_status || '<span class="cell-na">—</span>' %>
-          </td>
+          <td class="mono" style="font-size:.8em;color:var(--text-muted)"><%= r.last_logon ? r.last_logon.slice(0,10) : '—' %></td>
+          <td><%= r.employee_name || '—' %></td>
+          <td class="mono" style="font-size:.78em"><%= r.hr_email || '—' %></td>
+          <td class="mono" style="color:var(--amber)"><%= r.hr_tabel || '—' %></td>
+          <td><%= r.hr_dept || '—' %></td>
+          <td class="<%= terminated ? 'terminated-status' : '' %>"><%= hrStatus || '—' %></td>
           <td><span class="badge badge-<%= sev %>"><%= r.severity || 'INFO' %></span></td>
           <td class="mono" style="color:var(--text-muted)"><%= r.match_score ? Math.round(r.match_score) : '—' %></td>
         </tr>

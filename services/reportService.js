@@ -185,6 +185,66 @@ function generateCategoryReport(analysisId, category) {
   return rows.join('\n');
 }
 
+async function generateCategoryExcel(analysisId, category) {
+  const ExcelJS = require('exceljs');
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(category.replace(/_/g, ' '));
+
+  const values = db.prepare(`
+    SELECT
+      rr.severity, rr.description,
+      ad.sam_account_name, ad.display_name AS ad_name,
+      ad.mail AS ad_mail, ad.tabel_number AS ad_tabel,
+      ad.department AS ad_dept, ad.extensionAttr10 AS ad_type,
+      ad.account_expiry, ad.last_logon,
+      hr.employee_name AS hr_name, hr.email AS hr_email,
+      hr.tabel_number AS hr_tabel, hr.department AS hr_dept,
+      hr.position AS hr_position, hr.source_file
+    FROM reconciliation_results rr
+    LEFT JOIN ad_records ad ON rr.ad_record_id = ad.id
+    LEFT JOIN hr_records hr ON rr.hr_record_id = hr.id
+    WHERE rr.analysis_id = ? AND rr.category = ?
+  `).all(analysisId, category);
+
+  if (!values.length) {
+    ws.addRow(['No records in this category']);
+    ws.columns.forEach(col => { col.width = 20; });
+    return wb.xlsx.writeBuffer();
+  }
+
+  const headerRow = ws.addRow([
+    'Severity','Description','AD SamAccount','AD Name','AD Email','AD Tabel',
+    'AD Department','AD Type','AD Expiry','AD Last Logon',
+    'HR Name','HR Email','HR Tabel','HR Dept','HR Position','HR Source File'
+  ]);
+  headerRow.font = { bold: true };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1a4d2c' } };
+  headerRow.font = { bold: true, color: { argb: 'FFe2e8f0' } };
+
+  for (const r of values) {
+    ws.addRow([
+      r.severity || '',
+      r.description || '',
+      r.sam_account_name || '',
+      r.ad_name || '',
+      r.ad_mail || '',
+      r.ad_tabel || '',
+      r.ad_dept || '',
+      r.ad_type || '',
+      r.account_expiry || '',
+      r.last_logon || '',
+      r.hr_name || '',
+      r.hr_email || '',
+      r.hr_tabel || '',
+      r.hr_dept || '',
+      r.hr_position || '',
+      r.hr_source_file || ''
+    ]);
+  }
+
+  ws.columns.forEach(col => { col.width = 20; });
+  return wb.xlsx.writeBuffer();
+}
 
 function getAnalysisSummary(analysisId) {
   const analysis = db.prepare('SELECT * FROM analysis_runs WHERE id = ?').get(analysisId);
@@ -276,6 +336,7 @@ async function generateExcelReport(analysisId) {
 module.exports = {
   generateFullReport,
   generateCategoryReport,
+  generateCategoryExcel,
   getAnalysisSummary,
   generateExcelReport,
 };

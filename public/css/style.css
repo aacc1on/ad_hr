@@ -74,6 +74,9 @@ code {
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 3px; }
 
+/* Terminated status marker */
+.terminated-status { color: #ef4444; font-weight: 600; }
+
 /* ═══════════════════════════════════════════════════════════════════════════
    NAVBAR
    ═══════════════════════════════════════════════════════════════════════════ */

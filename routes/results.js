@@ -7,7 +7,7 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../config/db');
 const { isAuthenticated }    = require('../middleware/auth');
-const { getAnalysisSummary, generateFullReport, generateCategoryReport } = require('../services/reportService');
+const { getAnalysisSummary, generateFullReport, generateCategoryReport, generateCategoryExcel } = require('../services/reportService');
 
 // ── GET /results — History list ──────────────────────────────────────────────
 router.get('/', isAuthenticated, (req, res) => {
@@ -50,7 +50,48 @@ router.get('/:id', isAuthenticated, (req, res) => {
     categoryBreakdown,
   });
 });
+// ── GET /results/:id/category/:category/export — category CSV download ──
+router.get('/:id/category/:category/export', isAuthenticated, (req, res) => {
+  const analysisId = parseInt(req.params.id);
+  const category   = req.params.category;
 
+  const analysis = db.prepare(
+    'SELECT * FROM analysis_runs WHERE id = ? AND user_id = ?'
+  ).get(analysisId, req.session.userId);
+
+  if (!analysis) return res.status(404).send('Not found');
+
+  const csv = generateCategoryReport(analysisId, category);
+  const filename = `reconciliation-${analysis.analysis_name.replace(/\s+/g, '_')}-${category}-${analysisId}.csv`;
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send('\uFEFF' + csv);
+});
+
+// ── GET /results/:id/category/:category/export/excel — category Excel download ──
+router.get('/:id/category/:category/export/excel', isAuthenticated, async (req, res) => {
+  const analysisId = parseInt(req.params.id);
+  const category   = req.params.category;
+
+  const analysis = db.prepare(
+    'SELECT * FROM analysis_runs WHERE id = ? AND user_id = ?'
+  ).get(analysisId, req.session.userId);
+
+  if (!analysis) return res.status(404).send('Not found');
+
+  try {
+    const buffer = await generateCategoryExcel(analysisId, category);
+    const filename = `reconciliation-${analysis.analysis_name.replace(/\s+/g, '_')}-${category}-${analysisId}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
+  } catch (err) {
+    console.error('Excel export failed', err);
+    res.status(500).send('Failed to generate Excel report');
+  }
+});
 // ── GET /results/:id/category/:cat — Drill-down table ───────────────────────
 router.get('/:id/category/:category', isAuthenticated, (req, res) => {
   const analysisId = parseInt(req.params.id);
@@ -116,6 +157,29 @@ router.get('/:id/export', isAuthenticated, (req, res) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.send('\uFEFF' + csv); // BOM for correct Armenian/Unicode display in Excel
+});
+
+// ── GET /results/:id/export/excel — Full Excel download ────────────────
+router.get('/:id/export/excel', isAuthenticated, async (req, res) => {
+  const analysisId = parseInt(req.params.id);
+
+  const analysis = db.prepare(
+    'SELECT * FROM analysis_runs WHERE id = ? AND user_id = ?'
+  ).get(analysisId, req.session.userId);
+
+  if (!analysis) return res.status(404).send('Not found');
+
+  try {
+    const buffer = await generateExcelReport(analysisId);
+    const filename = `reconciliation-${analysis.analysis_name.replace(/\s+/g, '_')}-${analysisId}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
+  } catch (err) {
+    console.error('Excel export failed', err);
+    res.status(500).send('Failed to generate Excel report');
+  }
 });
 
 // ── GET /results/:id/export/:category — Category CSV download ───────────────
