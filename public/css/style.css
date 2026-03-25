@@ -230,6 +230,64 @@ code {
   gap: .5rem;
 }
 
+.command-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .9rem .95rem .8rem;
+  margin-top: .8rem;
+  color: var(--text);
+}
+
+.command-card strong {
+  color: var(--emerald);
+  font-size: .95rem;
+}
+
+.command-card pre {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-lit);
+  border-radius: 6px;
+  padding: .65rem;
+  margin-top: .45rem;
+  font-size: .86rem;
+  line-height: 1.4;
+  overflow-x: auto;
+}
+
+.command-copy-row {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  margin-top: .4rem;
+}
+
+.command-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .3rem;
+  padding: .35rem .65rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-size: .85rem;
+}
+
+.command-copy-btn:hover {
+  background: var(--border);
+}
+
+.command-copy-btn.success {
+  background: var(--emerald);
+  border-color: var(--emerald-dim);
+  color: #08240f;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    AUTH PAGES
    ═══════════════════════════════════════════════════════════════════════════ */

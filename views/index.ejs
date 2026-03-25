@@ -46,6 +46,22 @@
             Required columns: <code>SamAccountName</code>, <code>mail</code>,
             <code>DisplayName</code>, <code>extensionAttribute1</code> (Tabel), <code>Department</code>
           </p>
+          <div class="command-card">
+            <strong>PowerShell AD export command (save as <code>ad_export.csv</code>):</strong>
+            <div class="command-copy-row">
+              <button id="copyCommandBtn" type="button" class="command-copy-btn">📋 Copy</button>
+              <small style="color: var(--text-muted);">Click to copy command text</small>
+            </div>
+            <pre id="adExportCommand">Get-ADUser -Filter {Enabled -eq $true} -Properties `
+UserPrincipalName, mail, extensionAttribute1, extensionAttribute10,
+DisplayName, SamAccountName, Department, Title,
+AccountExpirationDate, PasswordLastSet, LastLogonDate, DistinguishedName |
+Select-Object `
+SamAccountName, UserPrincipalName, mail, DisplayName,
+extensionAttribute1, extensionAttribute10, Department, Title,
+AccountExpirationDate, PasswordLastSet, LastLogonDate, DistinguishedName |
+Export-Csv -Path "ad_export.csv" -NoTypeInformation -Encoding UTF8</pre>
+          </div>
         </div>
 
         <!-- HR files (multiple Excel) -->
@@ -165,6 +181,28 @@ function initZone(inputId, labelId) {
 
 initZone('adFile',  'adSelected');
 initZone('hrFiles', 'hrSelected');
+
+/* ── Copy command button ────────────────────────────────────── */
+const copyCommandBtn = document.getElementById('copyCommandBtn');
+if (copyCommandBtn) {
+  copyCommandBtn.addEventListener('click', async () => {
+    const commandEl = document.getElementById('adExportCommand');
+    if (!commandEl) return;
+    const text = commandEl.innerText.trim();
+    try {
+      await navigator.clipboard.writeText(text);
+      copyCommandBtn.textContent = '✓ Copied';
+      copyCommandBtn.classList.add('success');
+      setTimeout(() => {
+        copyCommandBtn.textContent = '📋 Copy';
+        copyCommandBtn.classList.remove('success');
+      }, 1800);
+    } catch (err) {
+      console.error('Copy failed', err);
+      alert('Copy failed; select and copy manually.');
+    }
+  });
+}
 
 /* ── Show loading on submit ──────────────────────────────────── */
 document.getElementById('uploadForm').addEventListener('submit', function () {
