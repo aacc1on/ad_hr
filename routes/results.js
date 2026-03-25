@@ -7,7 +7,13 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../config/db');
 const { isAuthenticated }    = require('../middleware/auth');
-const { getAnalysisSummary, generateFullReport, generateCategoryReport, generateCategoryExcel } = require('../services/reportService');
+const {
+  getAnalysisSummary,
+  generateFullReport,
+  generateCategoryReport,
+  generateCategoryExcel,
+  generateExcelReport,
+} = require('../services/reportService');
 
 // ── GET /results — History list ──────────────────────────────────────────────
 router.get('/', isAuthenticated, (req, res) => {
@@ -201,8 +207,6 @@ router.get('/:id/export/:category', isAuthenticated, (req, res) => {
   res.send('\uFEFF' + csv);
 });
 
-module.exports = router;
-
 // ── GET /results/:id/profiles.json — Deep Search data ───────────────────────
 router.get('/:id/profiles.json', isAuthenticated, (req, res) => {
   const analysisId = parseInt(req.params.id);
@@ -238,20 +242,4 @@ router.get('/:id/profiles.json', isAuthenticated, (req, res) => {
   res.json(rows);
 });
 
-// ── GET /results/:id/export/excel — Multi-sheet Excel download ───────────────
-router.get('/:id/export/excel', isAuthenticated, async (req, res) => {
-  const analysisId = parseInt(req.params.id);
-
-  const analysis = db.prepare(
-    'SELECT * FROM analysis_runs WHERE id = ? AND user_id = ?'
-  ).get(analysisId, req.session.userId);
-  if (!analysis) return res.status(404).send('Not found');
-
-  const { generateExcelReport } = require('../services/reportService');
-  const buf = await generateExcelReport(analysisId);
-  const filename = `AD_HR_Audit_${analysis.analysis_name.replace(/\s+/g,'_')}_${analysisId}.xlsx`;
-
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  res.send(buf);
-});
+module.exports = router;
