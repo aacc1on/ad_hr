@@ -49,4 +49,42 @@ const upload = multer({
   limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB per file
 });
 
-module.exports = upload;
+function handleMulterError(err, req, res, next) {
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    return res.render('index', {
+      username: req.session.username,
+      recentAnalyses: [],
+      error: 'File too large. Maximum size is 20 MB.',
+      success: null,
+    });
+  }
+  next(err);
+}
+
+function createHandleMulterError(db) {
+  return (err, req, res, next) => {
+    if (err) {
+      let recentAnalyses = [];
+      try {
+        recentAnalyses = db.prepare(`
+          SELECT id, analysis_name, created_at, status, total_ad_records, total_hr_records
+          FROM analysis_runs
+          WHERE user_id = ?
+          ORDER BY created_at DESC
+          LIMIT 5
+        `).all(req.session.userId);
+      } catch (dbErr) {
+        // fallback to []
+      }
+      return res.render('index', {
+        username: req.session.username,
+        recentAnalyses,
+        error: err.message || 'File upload error',
+        success: null,
+      });
+    }
+    next(err);
+  };
+}
+
+module.exports = { upload, handleMulterError, createHandleMulterError };

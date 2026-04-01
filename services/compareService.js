@@ -117,7 +117,7 @@ function ucomAlias(email) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * reconcileRecords(adRecords, hrRecords, analysisId)
+ * reconcileRecords(adRecords, hrRecords, analysisId, analysisName)
  *
  * Full port of the HTML tool's analyze() function.
  * Reads AD and HR records from the DB, classifies each account,
@@ -126,8 +126,9 @@ function ucomAlias(email) {
  * @param {object[]} adRecords  - Rows from ad_records table
  * @param {object[]} hrRecords  - Rows from hr_records table
  * @param {number}   analysisId
+ * @param {string}   analysisName
  */
-function reconcileRecords(adRecords, hrRecords, analysisId) {
+function reconcileRecords(adRecords, hrRecords, analysisId, analysisName) {
 
   // ── BUILD LOOKUP MAPS ───────────────────────────────────────────────────
   // hrByTabel: integer Tabel → HR record (first seen wins)
@@ -385,11 +386,9 @@ function reconcileRecords(adRecords, hrRecords, analysisId) {
   }
 
   // ── LOG SUMMARY ──────────────────────────────────────────────────────────
-  const analysis = db.prepare('SELECT analysis_name FROM analysis_runs WHERE id = ?').get(analysisId);
-
   logCompare({
     analysisId,
-    name:          analysis ? analysis.analysis_name : `#${analysisId}`,
+    name: analysisName || `#${analysisId}`,
     adTotal:       adRecords.length,
     hrTotal:       hrRecords.length,
     matched:       cnt.matched,

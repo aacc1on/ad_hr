@@ -12,7 +12,7 @@ const router  = express.Router();
 const path    = require('path');
 const fs      = require('fs');
 
-const upload        = require('../middleware/upload');
+const { upload, createHandleMulterError } = require('../middleware/upload');
 const db            = require('../config/db');
 const { isAuthenticated } = require('../middleware/auth');
 const { parseADExport }   = require('../services/adService');
@@ -20,15 +20,42 @@ const { parseMultipleHRFiles } = require('../services/excelService');
 const { reconcileRecords }     = require('../services/compareService');
 const { logAudit, logError }   = require('../services/loggerService');
 
+const handleMulterError = createHandleMulterError(db);
+
+// Helper to get recent analyses safely
+function getRecentAnalyses(userId) {
+  try {
+    return db.prepare(`
+      SELECT id, analysis_name, created_at, status, total_ad_records, total_hr_records
+      FROM analysis_runs
+      WHERE user_id = ?
+      ORDER BY created_at DESC
+      LIMIT 5
+    `).all(userId);
+  } catch (err) {
+    return [];
+  }
+}
+
+// Helper to sanitize analysis name
+function sanitizeAnalysisName(name) {
+  if (!name || !name.trim()) {
+    return `Analysis_${new Date().toISOString().slice(0, 10)}`;
+  }
+  let sanitized = name.trim();
+  if (sanitized.length > 120) {
+    sanitized = sanitized.slice(0, 120);
+  }
+  const regex = /^[\p{L}\p{N}\s\-\.,:()_]+$/u;
+  if (!regex.test(sanitized)) {
+    throw new Error('Analysis name contains invalid characters. Only letters, numbers, spaces, and basic punctuation are allowed.');
+  }
+  return sanitized;
+}
+
 // ── GET / — Upload page ───────────────────────────────────────────────────────
 router.get('/', isAuthenticated, (req, res) => {
-  const recentAnalyses = db.prepare(`
-    SELECT id, analysis_name, created_at, status, total_ad_records, total_hr_records
-    FROM analysis_runs
-    WHERE user_id = ?
-    ORDER BY created_at DESC
-    LIMIT 5
-  `).all(req.session.userId);
+  const recentAnalyses = getRecentAnalyses(req.session.userId);
 
   res.render('index', {
     username:       req.session.username,
@@ -46,6 +73,7 @@ router.post(
     { name: 'ad_file',  maxCount: 1  },
     { name: 'hr_files', maxCount: 10 },  // up to 10 HR files
   ]),
+  handleMulterError,
   async (req, res) => {
 
     // Helper to clean up uploaded temp files
@@ -66,7 +94,7 @@ router.post(
         cleanup(allUploadedFiles);
         return res.render('index', {
           username:       req.session.username,
-          recentAnalyses: [],
+          recentAnalyses: getRecentAnalyses(req.session.userId),
           error:          'Please upload one AD file (CSV) and at least one HR file (Excel).',
           success:        null,
         });
@@ -74,8 +102,7 @@ router.post(
 
       const adFile   = req.files.ad_file[0];
       const hrFiles  = req.files.hr_files;
-      const analysisName = (req.body.analysis_name || '').trim()
-        || `Analysis_${new Date().toISOString().slice(0, 10)}`;
+      const analysisName = sanitizeAnalysisName(req.body.analysis_name);
 
       // ── Create analysis run record ─────────────────────────────────────
       const runResult = db.prepare(`
@@ -99,7 +126,7 @@ router.post(
         db.prepare("UPDATE analysis_runs SET status='failed' WHERE id=?").run(analysisId);
         cleanup(allUploadedFiles);
         return res.render('index', {
-          username: req.session.username, recentAnalyses: [],
+          username: req.session.username, recentAnalyses: getRecentAnalyses(req.session.userId),
           error: `AD file error: ${err.message}`, success: null,
         });
       }
@@ -113,7 +140,7 @@ router.post(
         db.prepare("UPDATE analysis_runs SET status='failed' WHERE id=?").run(analysisId);
         cleanup(allUploadedFiles);
         return res.render('index', {
-          username: req.session.username, recentAnalyses: [],
+          username: req.session.username, recentAnalyses: getRecentAnalyses(req.session.userId),
           error: `HR file error: ${err.message}`, success: null,
         });
       }
@@ -162,7 +189,7 @@ router.post(
       const adDBRecords = db.prepare('SELECT * FROM ad_records WHERE analysis_id = ?').all(analysisId);
       const hrDBRecords = db.prepare('SELECT * FROM hr_records WHERE analysis_id = ?').all(analysisId);
 
-      reconcileRecords(adDBRecords, hrDBRecords, analysisId);
+      reconcileRecords(adDBRecords, hrDBRecords, analysisId, analysisName);
 
       // ── Update analysis run with final stats ────────────────────────────
       db.prepare(`
@@ -198,7 +225,7 @@ router.post(
       cleanup(allUploadedFiles);
 
       res.render('index', {
-        username: req.session.username, recentAnalyses: [],
+        username: req.session.username, recentAnalyses: getRecentAnalyses(req.session.userId),
         error: `Unexpected error: ${err.message}`, success: null,
       });
     }
